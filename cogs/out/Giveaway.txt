@@ -1,0 +1,43 @@
+import discord
+import datetime
+from discord.ext import commands
+from discord.ext.commands.core import command
+from discord.utils import get
+from discord import Embed, Emoji
+import asyncio
+
+Participants = []
+
+#TODO: List active giveaways
+#TODO: Participate giveaway
+
+class Giveaway(commands.Cog):
+    def __init__(self, client):
+        self.client = client
+
+    @commands.command(aliases=['gc'])
+    @commands.is_owner()
+    async def gcreate(self, ctx, Time : str, NrWinners : int, *, Reward : str):
+        # Time split
+        Time_format = Time[-1]
+        Time_num = int(Time[:-1])
+        if(Time_format == 's'): # Seconds
+            pass
+        if(Time_format == 'm'): # Minutes
+            pass
+        if(Time_format == 'h'): # Hours
+            pass
+        if(Time_format == 'd'): # Days
+            pass
+        if(Time_format == 'mo'): # Months
+            pass
+
+        description = f"""
+                      Reward : {Reward}\n
+                      Number of Winners : {NrWinners}\n
+                      Time : {Time}
+                      """
+        embed = Embed(color = 0xff006f, title = 'Giveaway', description = str(description))
+
+def setup(client):
+    client.add_cog(Giveaway(client))

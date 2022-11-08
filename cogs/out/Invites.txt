@@ -1,0 +1,68 @@
+import discord
+import motor.motor_asyncio
+from discord.ext import commands
+from discord import Embed, Emoji
+from discord.ext.commands import BucketType, cooldown, CommandOnCooldown
+
+mongoURL = ""
+cluster = motor.motor_asyncio.AsyncIOMotorClient(mongoURL)
+db = cluster["phoenixDB"]
+collection = db["phoenixCollection"]
+
+class InviteSys(commands.Cog):
+    def __init__(self, client):
+        self.client = client
+
+    @commands.command()
+    @commands.cooldown(3, 30, commands.BucketType.user)
+    async def inviterewards(self, ctx):
+        embed = Embed(title = '**Invite Rewards**', description = '**De fiecare data cand invitati pe cineva, primiti o anumita suma de credite! Good Luck!**', color = 0xff006f)
+        embed.set_footer(text = 'Made by iLectus#3916', icon_url='https://cdn.discordapp.com/attachments/768118506813390859/804786242692579348/phoenix_Logo2.png')
+        embed.add_field(name = '`10` invites', value = '`300` <:currency:800676742104088578>', inline=False)
+        embed.add_field(name = '`30` invites', value = '`1000` <:currency:800676742104088578>', inline=False)
+        embed.add_field(name = '`50` invites', value = '`1500` <:currency:800676742104088578>', inline=False)
+        await ctx.send(embed = embed, delete_after=5*60)
+
+    @commands.command()
+    @commands.cooldown(3, 30, commands.BucketType.user)
+    async def invites(self, ctx, member : discord.Member = None):
+        global collection
+        global db
+        global cluster
+        global mongoURL
+        user_id = ctx.author.id
+        
+        if member == None:
+            if await collection.count_documents({"_id":user_id, "invites":{"$exists":True}}) == 0:
+                # Userul nu are fieldul invites
+                await ctx.send(embed = Embed(color=0xff006f ,description = "**Nu ai invitat pe nimeni pe server!**"), delete_after=15)
+            else:
+                # Userul are fieldul invites
+                result = collection.find({"_id":user_id}, {"invites":True})
+                async for i in result:
+                    invites = i["invites"]
+                    await ctx.send(embed = Embed(color=0xff006f ,description = f"**Ai** `{invites}` **invites.**"), delete_after=15)
+        else:
+            member_id = member.id
+            if await collection.count_documents({"_id":member_id, "invites":{"$exists":True}}) == 0:
+                # Membrul nu are fieldul invites
+                await ctx.send(embed = Embed(color=0xff006f ,description = f"{member.mention} **nu a invitat pe nimeni pe server.**"), delete_after=15)
+            else:
+                # Membrul are fieldul invites
+                result = collection.find({"_id":member_id}, {"invites":True})
+                async for i in result:
+                    invites = i["invites"]
+                    await ctx.send(embed = Embed(color=0xff006f ,description = f"{member.mention} **are** `{invites}` **invites.**"), delete_after=15)
+
+    @invites.error
+    async def invites_error(self, ctx, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(embed = Embed(color=0xff006f, description = f"**Incearca din nou in 15 secunde! |** :clock1:"), delete_after=10)
+
+    @inviterewards.error
+    async def inviterewards_error(self, ctx, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(embed = Embed(color=0xff006f, description = f"**Incearca din nou in 15 secunde! |** :clock1:"), delete_after=10)
+
+def setup(client):
+    client.add_cog(InviteSys(client))

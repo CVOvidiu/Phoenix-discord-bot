@@ -1,0 +1,356 @@
+import discord
+from discord.ext import commands
+from discord import Embed
+from PIL import Image, ImageFont, ImageDraw, ImageOps
+from io import BytesIO
+from datetime import datetime
+import motor.motor_asyncio
+
+total_members = 0
+mongoURL = ""
+cluster = motor.motor_asyncio.AsyncIOMotorClient(mongoURL)
+db = cluster["phoenixDB"]
+collection = db["phoenixCollection"]
+#InviteList = db["BFACollection"]
+#InviteRewards = db["inviteRewards"]
+#invites = []
+
+class JoinLeft(commands.Cog):
+    def __init__(self, client):
+        self.client = client
+
+    def draw_ellipse(image, bounds, width=1, outline='white', antialias=4):
+        """Improved ellipse drawing function, based on PIL.ImageDraw."""
+
+        # Use a single channel image (mode='L') as mask.
+        # The size of the mask can be increased relative to the imput image
+        # to get smoother looking results. 
+        mask = Image.new(
+            size=[int(dim * antialias) for dim in image.size],
+            mode='L', color='black')
+        draw = ImageDraw.Draw(mask)
+
+        # draw outer shape in white (color) and inner shape in black (transparent)
+        for offset, fill in (width/-2.0, 'white'), (width/2.0, 'black'):
+            left, top = [(value + offset) * antialias for value in bounds[:2]]
+            right, bottom = [(value - offset) * antialias for value in bounds[2:]]
+            draw.ellipse([left, top, right, bottom], fill=fill)
+
+        # downsample the mask using PIL.Image.LANCZOS 
+        # (a high-quality downsampling filter).
+        mask = mask.resize(image.size, Image.LANCZOS)
+        # paste outline color to input image through the mask
+        image.paste(outline, mask=mask)
+
+    """async def InviteReward(self, inv_update, on_invites, coins):
+
+        if inv_update == on_invites:
+            # Daca a ajuns la inviteuri
+            if await InviteRewards.count_documents({"_id":inviter}) == 0:
+                # Daca nu a existat pana acum in InviteRewards il bagam
+                await InviteRewards.insert_one({"_id":inviter})
+            if await InviteRewards.count_documents({"_id":inviter, f"{on_invites}inv":{"$exists":True}}) == 0:
+                # Daca nu a luat rewardul pana acum
+                if await collection.count_documents({"_id":inviter, "balance":{"$exists":True}}) == 0:
+                    # Daca inviterul nu are balanta ii bagam balanta
+                    await collection.update_one({"_id":inviter}, {"$set":{"balance":0}}, upsert=True)
+                                    
+                anno = self.client.get_channel(570305206139748353)
+
+                # Ii bagam rewardul
+                result_bal = collection.find({"_id":inviter}, {"balance":True})
+                async for inv_bal in result_bal:
+                    u_bal = inv_bal["balance"]
+                    u_bal_upt = u_bal + coins
+                    await collection.update_one({"_id":inviter}, {"$set":{"balance":u_bal_upt}}, upsert=True)
+
+                await InviteRewards.update_one({"_id":inviter}, {"$set":{f"{on_invites}inv":0}}, upsert=True)
+                await anno.send(f"**{inviter_mention.mention} are in acest moment `{inv_update}` votes si a primit `{coins}`** <:currency:800676742104088578> **Felicitari!**")
+
+    def find_invite_by_code(invite_list, code):
+        for inv in invite_list:
+            if inv.code == code:
+                return inv"""
+
+    """@commands.Cog.listener()
+    async def on_ready(self):
+        global invites
+
+        Incarca toate invite-urile de pe server in invites
+        for guild in self.client.guilds:
+            invites = await guild.invites()
+        print("Invites Loaded")"""
+    
+    """@commands.Cog.listener()
+    async def on_ready(self):
+        global total_members
+        logs = self.client.get_channel(id = 877659413643657276)
+        gui = self.client.get_guild(id = 569077625826443274)
+
+        for member in gui.members:
+            if member.bot == 0:
+                total_members += 1
+        await logs.send(embed = Embed(description = f"<a:loading_color:877665020949954611> | Members loaded : `{total_members}` loaded."))
+
+        req_channel = self.client.get_channel(id = 879295529371176981)
+        await req_channel.edit(name = f"•̥🈳Members • {total_members}")"""
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        global total_members
+        channel = self.client.get_channel(569077625826443276) #General Chat
+        JandL = self.client.get_channel(569096412369911808) #Welcome and Leave channel 
+        reg = self.client.get_channel(569880437430812712) #Regulament mention
+        tyr = self.client.get_channel(570616727952556032) #Take Your Roles mention
+        logs = self.client.get_channel(id = 877659413643657276) # Phoenix logs
+
+        if member.bot == 0:
+
+            """# Update Counter
+            total_members += 1
+            req_channel = self.client.get_channel(id = 879295529371176981)
+            await req_channel.edit(name = f"•̥🈳Members • {total_members}")
+            await logs.send(embed = Embed(description = f"<a:fox_2:879059841879003208> | `{member.display_name}` has joined. Members : `{total_members}`"))"""
+
+            # Not Verified
+            role = discord.utils.get(member.guild.roles, id = 878972176827551746)
+            await member.add_roles(role)
+
+            # Delimitatoare
+            del_1 = discord.utils.get(member.guild.roles, id = 798734389462302761)
+            del_2 = discord.utils.get(member.guild.roles, id = 836960907275141190)
+            del_3 = discord.utils.get(member.guild.roles, id = 836306673986830378)
+            await member.add_roles(del_1, del_2, del_3)
+
+        # -------- PIL Config --------
+
+        font = ImageFont.truetype("Thermidava Black.ttf", 50)
+        text = f'WELCOME {member.display_name}!'
+        joinIMG = Image.open("assets/join.png") # Join Image
+
+        # Avatar Member
+        memAvatarData = member.avatar_url_as()
+        data = BytesIO(await memAvatarData.read())
+        memAvatar = Image.open(data)
+        memAvatar = memAvatar.resize((250,250))
+
+        bigsize = (memAvatar.size[0]*3, memAvatar.size[1]*3)
+        mask = Image.new('L', bigsize, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0) + bigsize, fill=255)
+        mask = mask.resize(memAvatar.size, Image.ANTIALIAS)
+        memAvatar.putalpha(mask)
+
+        draw = ImageDraw.Draw(joinIMG)
+        w, h = draw.textsize(text, font=font)
+        x, y = joinIMG.size
+        eX, eY = 250, 250 # Size bounding box
+        bounding_box = (x/2 - eX/2, y/2 - eY/2 - 40, x/2 + eX/2, y/2 + eY/2 - 40)
+        JoinLeft.draw_ellipse(joinIMG, bounding_box, width=11)
+        draw.text(((1024/2 - w/2), 350), text, (255, 255, 255), font=font)
+        joinIMG.paste(memAvatar, (387,60), memAvatar)
+        joinIMG.save("assets/profile.png")
+
+        # ---------------------------
+
+        '''invites_before_join = invites
+        invites_after_join = await member.guild.invites()
+
+        for invite in invites_before_join:
+            # Observa ca numarul de folosinte al codului de invite s-a marit
+            print("invite.uses : " + invite.uses)
+            print("find_invite_by_code : " + JoinLeft.find_invite_by_code(invites_after_join, invite.code).uses)
+            print("invite.code : " + invite.code)
+            if invite.uses < JoinLeft.find_invite_by_code(invites_after_join, invite.code).uses:
+                # Toate o sa fie egale pana da de cel care a crescut
+                inviter = invite.inviter.id
+                if invite.inviter.bot == 1:
+                    # Inviter-ul e bot
+                    embedJ = Embed(color=0xff006f, description=f'▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂\n\n**Welcome,** {member.mention}\n<:arrow:800020982759817256> Inviter : DISBOARD\n<:arrow:800020982759817256> Te rugam sa citesti {reg.mention} \n <:arrow:800020982759817256> Sa iti alegi rolurile : {tyr.mention}! <:neatza:772418518075179009> \n <:arrow:800020982759817256> Tagul serverului (grad special) : ﾉʙꜰᴀ \n▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂')
+                    embed = Embed(description = f'**Bine ai venit pe BornFormAshes, {member.mention}!**\n**Inviter : DISBOARD**', color = 0xff006f)
+                    await channel.send(embed = embedJ, delete_after=60*15)
+                    file = discord.File("assets/profile.png", filename="image.png")
+                    embed.set_image(url="attachment://image.png")
+                    await JandL.send(file=file, embed = embed)
+                    invites = invites_after_join
+                else:
+                    # Inviter-ul nu este bot
+                    # Verifica daca inviter-ul este in baza de invite-uri
+                    if await InviteList.count_documents({"_id":inviter}) == 0:
+                        # Daca nu este, baga-l
+                        await InviteList.insert_one({"_id":inviter})
+                    # Acum inviter-ul ar trebui sa fie in baza de invite-uri
+                    # Arunca membrul care a intrat in categoria inviterului ca invitat de inviter
+                    await InviteList.update_one({"_id":inviter}, {"$set":{f"{member.id}":0}}, upsert=True)
+                    
+                    # Verificam daca inviter-ul este in baza main
+                    if await collection.count_documents({"_id":inviter}) == 0:
+                        # Daca nu este, il bagam si ii setam inviteurile la 0
+                        await collection.insert_one({"_id":inviter})
+                        await collection.update_one({"_id":inviter}, {"$set":{"invites":0}}, upsert=True)
+                    
+                    # Daca nu gaseste categoria de invites in documentul inviterului fiind in baza
+                    if await collection.count_documents({"_id":inviter, "invites":{"$exists":True}}) == 0:
+                        # Ii baga si ii seteaza invites la 0
+                        await collection.update_one({"_id":inviter}, {"$set":{"invites":0}}, upsert=True)
+                    
+                    gui = self.client.get_guild(id = 569077625826443274)
+                    inviter_mention = gui.get_member(user_id = inviter)
+                    # Acum inviter-ul ar trebui sa fie in baza main setat
+                    result = collection.find({"_id":inviter}, {"invites":True})
+                    async for i in result:
+                        i_last = i["invites"]
+                        i_upt = i_last + 1
+                        # Bonus per invite
+                        await JoinLeft.InviteReward(self, i_upt, 10, 300)
+                        await JoinLeft.InviteReward(self, i_upt, 30, 1000)
+                        await JoinLeft.InviteReward(self, i_upt, 50, 1500)
+                        # Actualizam invite-urile
+                        await collection.update_one({"_id":inviter}, {"$set":{"invites":i_upt}}, upsert=True)
+                        embedJ = Embed(color=0xff006f, description=f'▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂\n\n**Welcome,** {member.mention}\n<:arrow:800020982759817256> Inviter : {inviter_mention.name}\n<:arrow:800020982759817256> Te rugam sa citesti {reg.mention} \n <:arrow:800020982759817256> Sa iti alegi rolurile : {tyr.mention}! <:neatza:772418518075179009> \n <:arrow:800020982759817256> Tagul serverului (grad special) : ﾉʙꜰᴀ \n▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂')
+                        await channel.send(embed = embedJ, delete_after=60*15)
+                        embed = Embed(description = f'**Bine ai venit pe BornFormAshes, {member.mention}!**\n**Ai fost invitat de catre {inviter_mention.name} acesta avand in acest moment `{i_upt}` invites.**', color = 0xff006f)
+                        
+                    file = discord.File("assets/profile.png", filename="image.png")
+                    embed.set_image(url="attachment://image.png")
+                    invites = invites_after_join
+                    await JandL.send(file=file, embed = embed)'''
+
+        embed = Embed(color = 0xffb20c)
+        embed.set_image(url="attachment://image.png")
+        file = discord.File("assets/profile.png", filename="image.png")
+        title = "BINE AI VENIT PE » BornFromAshes « !"
+        description = f"""
+        <:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680> \n
+        **Bine ai venit pe server,** {member.mention} **!** <:zeroyay:837794979279274055> \n
+        <:pin:844915599175319573> **» Te rugam sa citesti** {reg.mention} **!**
+        <:pin:844915599175319573> **» Alegeti rolurile de pe** {tyr.mention} **!**
+        <:pin:844915599175319573> **» Tagul serverului (grad special) :** ﾉʙꜰᴀ **.** \n
+        <:heartyy:844922846715314176> **Speram sa te bucuri de timpul petrecut cu noi! Have fun!** <:zerolove:837788668436807684> \n
+        <:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680><:line:844914054095175680>
+        """
+
+        embedJ = Embed(color = 0xffb20c, title = title, description = description, timestamp = datetime.utcnow())
+        embedJ.set_author(name = f'{member.display_name}#{member.discriminator}', icon_url = member.avatar_url)
+        embedJ.set_image(url = 'https://cdn.discordapp.com/attachments/842428676439539722/844939348344438834/bineaivenit.gif')
+        embedJ.set_footer(text = 'Thanks for joining!', icon_url = 'https://cdn.discordapp.com/attachments/842428676439539722/844988370572804146/gasdh.png')
+        gui = self.client.get_guild(id = 569077625826443274)
+        embedJ.set_thumbnail(url = gui.icon_url)
+        await channel.send(embed = embedJ, delete_after = 5*60)
+        await JandL.send(f'**Bine ai venit pe BornFromAshes, {member.name} ! <a:fox_1:879059893598957579> <a:fox_2:879059841879003208>**')
+        await JandL.send(file=file, embed = embed)
+
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        global total_members
+        JandL = self.client.get_channel(569096412369911808)
+        logs = self.client.get_channel(id = 877659413643657276)
+
+        """if member.bot == 0:    
+            
+            # Update Counter
+            total_members -= 1
+            req_channel = self.client.get_channel(id = 879295529371176981)
+            await req_channel.edit(name = f"•̥🈳Members • {total_members}")
+            await logs.send(embed = Embed(description = f"<a:wings_1:877665716952789003> | `{member.display_name}` has left. Members : `{total_members}`"))"""
+        
+        # -------- PIL Config --------
+
+        font = ImageFont.truetype("Thermidava Black.ttf", 50)
+        text = f'GOODBYE {member.display_name}!'
+        leaveIMG = Image.open("assets/leave.png") # Leave Image
+
+        # Avatar Member
+        memAvatarData = member.avatar_url_as()
+        data = BytesIO(await memAvatarData.read())
+        memAvatar = Image.open(data) 
+        memAvatar = memAvatar.resize((250,250))
+
+        bigsize = (memAvatar.size[0]*3, memAvatar.size[1]*3)
+        mask = Image.new('L', bigsize, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0) + bigsize, fill=255)
+        mask = mask.resize(memAvatar.size, Image.ANTIALIAS)
+        memAvatar.putalpha(mask)
+
+        w, h = draw.textsize(text, font=font)
+        x, y = leaveIMG.size
+        eX, eY = 250, 250 # Size bounding box
+        bounding_box = (x/2 - eX/2, y/2 - eY/2 - 40, x/2 + eX/2, y/2 + eY/2 - 40)
+        JoinLeft.draw_ellipse(leaveIMG, bounding_box, width=11)
+        draw = ImageDraw.Draw(leaveIMG)
+        draw.text(((1024/2 - w/2), 350), text, (255, 255, 255), font=font)
+        leaveIMG.paste(memAvatar, (387,60), memAvatar)
+        leaveIMG.save("assets/profile2.png")
+
+        # ---------------------------
+
+        '''# --------------- DATABASE ---------#
+        docs = await InviteList.count_documents({f"{member.id}":0})
+        if docs == 0: # Nu a gasit membrul in invite list, nu stim de catre cine a fost invitat
+            embed = Embed(description = f'**{member.name} a parasit BornFormAshes!**\n**Nu stim de catre cine a fost invitat.**', color = 0x1a1a1a)
+            file = discord.File("assets/profile2.png", filename="image.png")
+            embed.set_image(url="attachment://image.png")
+            await JandL.send(file=file, embed = embed)
+        else: 
+            # Stim de catre cine a fost invitat, se afla in baza de inviteuri
+            # Cautam in baza de inviteuri
+            result = InviteList.find({}, {f"{member.id}":True})
+            async for i in result:
+
+                # Care este id-ul inviterului?
+                inviter = i["_id"]
+                gui = self.client.get_guild(id = 569077625826443274)
+                # Ca sa ii putem da mention
+                inviter_mention = gui.get_member(user_id = inviter)
+                # Sa fie mai usor de implementat in baza
+                mem_invited = member.id
+
+                # Scoate din lista inviterului membrul
+                await InviteList.update_one({"_id":inviter}, {"$unset":{f"{mem_invited}":1}})
+
+                # Verificam daca in invitebase nu mai are invitati
+                raw_data = InviteList.find({"_id":inviter})
+                just_id = InviteList.find({"_id":inviter}, {"_id":1})
+                async for i2 in just_id:
+                    async for i3 in raw_data:
+                        if i2 == i3:
+                            # Daca este doar id-ul lui in invite base inseamna ca nu mai are invitati
+                            await InviteList.delete_one({"_id":inviter})
+                            # Il stergem din invite base
+                            await collection.update_one({"_id":inviter}, {"$unset":{"invites":1}})
+                            # Ii stergem si categoria de invites din mainbase
+                            # Daca e doar id-ul lui in mainbase
+                            raw_data_main = collection.find({"_id":inviter})
+                            just_id_main = collection.find({"_id":inviter}, {"_id":1})
+                            async for just_id_output in just_id_main:
+                                async for raw_data_output in raw_data_main:
+                                    if just_id_output == raw_data_output:
+                                        # Daca este doar id-ul lui, sterge-l din main base
+                                        await collection.delete_one({"_id":inviter})
+                                        embed = Embed(description = f'**{member.name} a parasit BornFormAshes!**\n**A fost invitat de catre {inviter_mention.name} acesta avand in acest moment `0` invites.**', color = 0x1a1a1a)
+                            # Daca nu a intrat in 'if'-ul anterior inseamna ca mai are fieluri in main base dar tot nu mai are inviteuri
+                            embed = Embed(description = f'**{member.name} a parasit BornFormAshes!**\n**A fost invitat de catre {inviter_mention.name} acesta avand in acest moment `0` invites.**', color = 0x1a1a1a)
+                        else: # inseamna ca mai are invitati in invite base
+                            # Scadem numarul de inviteuri din main base
+                            result_main = collection.find({"_id":inviter}, {"invites":True})
+                            async for invites in result_main:
+                                mem_invites = invites["invites"]
+                                mem_invites_upt = mem_invites - 1
+                                #Actualizam main base
+                                await collection.update_one({"_id":inviter}, {"$set":{"invites":mem_invites_upt}}, upsert=True)
+                                embed = Embed(description = f'**{member.name} a parasit BornFormAshes!**\n**A fost invitat de catre {inviter_mention.name} acesta avand in acest moment `{mem_invites_upt}` invites.**', color = 0x1a1a1a)
+
+            file = discord.File("assets/profile2.png", filename="image.png")
+            embed.set_image(url="attachment://image.png")
+            await JandL.send(file=file, embed = embed)'''
+
+        embed = Embed(color = 0x0d0822)
+        file = discord.File("assets/profile2.png", filename="image.png")
+        embed.set_image(url="attachment://image.png")
+        await JandL.send(f'<a:wing_1:879011683840983040> **{member.name} a parasit BornFormAshes!** <a:wing_2:879011915391717376>')
+        await JandL.send(file=file, embed = embed)
+
+def setup(client):
+    client.add_cog(JoinLeft(client))
